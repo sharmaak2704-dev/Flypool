@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FlyPool - Shared airport cabs</title>
+<style>
+:root{--bg:#eef2f3;--card:#fff;--ink:#112025;--mut:#5f7178;--br:#d9e1e4;--pri:#0a6f6a;--pri2:#e2f2f1;--on:#fff;--warn:#b45309;--ok:#157a3b;--bad:#b42323;--seat:#e9eef0;--font:"Trebuchet MS","Segoe UI",system-ui,sans-serif;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0d1417;--card:#162126;--ink:#e6eef0;--mut:#8fa3aa;--br:#27363d;--pri:#35c4bb;--pri2:#10302f;--on:#062321;--warn:#f59e0b;--ok:#4ade80;--bad:#f87171;--seat:#22323a}}
+:root[data-theme="dark"]{--bg:#0d1417;--card:#162126;--ink:#e6eef0;--mut:#8fa3aa;--br:#27363d;--pri:#35c4bb;--pri2:#10302f;--on:#062321;--warn:#f59e0b;--ok:#4ade80;--bad:#f87171;--seat:#22323a}
+*{box-sizing:border-box}html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45}
+.app{max-width:480px;margin:0 auto;padding:12px 14px 40px}
+h1{font-size:22px;margin:4px 0 2px;letter-spacing:-.3px}h2{font-size:17px;margin:14px 0 8px}
+.sub{color:var(--mut);margin:0 0 10px}
+.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--br);border-radius:12px;padding:4px;margin:8px 0 12px}
+.tabs button{flex:1;border:0;background:none;color:var(--mut);padding:9px;border-radius:9px;font:inherit;font-weight:600;cursor:pointer}
+.tabs button.on{background:var(--pri);color:var(--on)}
+.card{background:var(--card);border:1px solid var(--br);border-radius:14px;padding:14px;margin:10px 0}
+label{display:block;font-weight:600;margin:10px 0 4px}
+input,select{width:100%;padding:11px;border:1px solid var(--br);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit}
+.btn{width:100%;border:0;background:var(--pri);color:var(--on);padding:13px;border-radius:12px;font:inherit;font-weight:700;margin-top:12px;cursor:pointer}
+.btn:disabled{opacity:.4;cursor:not-allowed}.btn.alt{background:var(--pri2);color:var(--pri)}
+.btn.sm{width:auto;padding:7px 10px;margin:0;font-size:13px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.chip{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;background:var(--pri2);color:var(--pri)}
+.chip.ok{color:var(--ok)}.chip.bad{color:var(--bad)}.chip.warn{color:var(--warn)}
+.car{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:260px;margin:8px auto;padding:14px;border:2px solid var(--br);border-radius:26px}
+.car .drv{grid-column:1/3;text-align:center;color:var(--mut);font-size:12px}
+.seat{padding:16px 0;border:2px solid var(--br);border-radius:12px;background:var(--seat);color:var(--ink);font:inherit;font-weight:700;cursor:pointer}
+.seat.taken{opacity:.45;cursor:not-allowed;font-size:12px}.seat.sel{background:var(--pri);color:var(--on);border-color:var(--pri)}
+.big{font-size:34px;font-weight:800;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.p{display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed var(--br)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 4px;text-align:left;border-bottom:1px solid var(--br)}
+.wrap{overflow-x:auto}
+.demo{border:2px dashed var(--br);border-radius:14px;padding:10px;margin-top:18px}
+.demo .row{padding:6px 0;border-top:1px solid var(--br);flex-wrap:wrap}.demo .row:first-of-type{border-top:0}
+.note{color:var(--mut);font-size:13px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--pri);outline-offset:2px}
+</style><link rel="icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FFC20E">
+<link rel="apple-touch-icon" href="icon-192.png">
+<script>if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js')</script>
+</head><body><div class="app" id="app"></div>
+<script>
+const ZONES=['Kalinga Nagar','Patia / Infocity','Old Town','Khandagiri'];
+const F=[{id:'6E 502',from:'Delhi',sched:'21:40',delay:0,landed:false,left:1200},
+{id:'AI 665',from:'Mumbai',sched:'19:15',delay:0,landed:false,left:1200},
+{id:'UK 811',from:'Bengaluru',sched:'08:30',delay:0,landed:false,left:1200}];
+const B=[{id:1,name:'Rahul',flight:'6E 502',zone:'Kalinga Nagar',ladies:false,seat:1,status:'booked'},
+{id:2,name:'Ankit',flight:'6E 502',zone:'Kalinga Nagar',ladies:false,seat:3,status:'booked'},
+{id:3,name:'Sneha',flight:'6E 502',zone:'Patia / Infocity',ladies:true,seat:2,status:'booked'},
+{id:4,name:'Priya',flight:'AI 665',zone:'Old Town',ladies:false,seat:4,status:'booked'}];
+const D=new Set();
+let S={role:'p',screen:'login',user:null,base:400,extra:50,adv:150,pay:'UPI',nid:10,sel:{flight:'6E 502',zone:ZONES[0],ladies:false,seat:null}};
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fl=id=>F.find(f=>f.id===id);
+const price=l=>S.base+(l?S.extra:0);
+const key=b=>b.flight+'|'+b.zone+'|'+(b.ladies?1:0);
+const live=b=>b.status!=='cancelled';
+const poolOf=(f,z,l)=>B.filter(b=>b.flight===f&&b.zone===z&&!!b.ladies===!!l&&live(b));
+const clock=f=>{const[h,m]=f.sched.split(':').map(Number);const t=(h*60+m+f.delay)%1440;return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0')};
+const mmss=s=>String(Math.floor(Math.max(s,0)/60)).padStart(2,'0')+':'+String(Math.max(s,0)%60).padStart(2,'0');
+const LBL={booked:['Waiting','warn'],reached:['At the cab','ok'],riding:['On the way','ok'],noshow:['Missed - advance forfeited','bad']};
+const chip=st=>`<span class="chip ${LBL[st][1]}">${LBL[st][0]}</span>`;
+
+function departPool(k){D.add(k);B.forEach(b=>{if(key(b)===k){if(b.status==='reached')b.status='riding';else if(b.status==='booked')b.status='noshow'}})}
+function tick(){let ch=false;F.forEach(f=>{if(f.landed&&f.left>0){f.left--;ch=true;if(f.left<=0)endTimer(f)}});
+ const lg=S.role==='p'?(!S.user||['book','pay'].includes(S.screen)):!S.auth[S.role];if(ch&&!lg)R()}
+function endTimer(f){[...new Set(B.filter(b=>b.flight===f.id).map(key))].forEach(k=>{if(!D.has(k))departPool(k)})}
+setInterval(tick,1000);
+
+S.auth={d:false,a:false};
+const CRED={d:['DRV101','1234'],a:['admin','admin123']};
+function staffLogin(r){const u=$('su').value.trim(),p=$('sp').value;
+ if(u===CRED[r][0]&&p===CRED[r][1]){S.auth[r]=true;R()}else alert('Wrong ID or password. Use the demo login shown on screen.')}
+function staffOut(r){S.auth[r]=false;R()}
+function staffLoginView(r){const d=r==='d';return `<div class="card"><h2>${d?'Driver':'Admin'} sign in</h2>
+<label for="su">${d?'Driver ID':'Username'}</label><input id="su" autocomplete="off"><label for="sp">${d?'PIN':'Password'}</label><input id="sp" type="password" autocomplete="off">
+<button class="btn" onclick="staffLogin('${r}')">Sign in</button>
+<p class="note">Demo login: <b>${CRED[r][0]}</b> / <b>${CRED[r][1]}</b></p></div>`}
+function outBar(r){return `<div class="row"><span class="note">Signed in as ${r==='d'?'Driver DRV101':'Admin'}</span><button class="btn sm alt" onclick="staffOut('${r}')">Sign out</button></div>`}
+function go(s){S.screen=s;R()}
+function setRole(r){S.role=r;R()}
+function login(){const n=$('n').value.trim(),p=$('ph').value.trim();
+ if(!n||p.length<10){alert('Enter your name and a 10-digit phone number.');return}
+ S.user={name:n,phone:p,gender:$('g').value};go('book')}
+function setSel(k,v){S.sel[k]=v;if(k!=='seat')S.sel.seat=null;R()}
+function seat(n){S.sel.seat=n;R()}
+function pay(){const s=S.sel;if(poolOf(s.flight,s.zone,s.ladies).some(b=>b.seat===s.seat)){alert('Seat just taken. Pick another.');S.sel.seat=null;go('book');return}
+ B.push({id:S.nid++,name:S.user.name,flight:s.flight,zone:s.zone,ladies:s.ladies,seat:s.seat,status:'booked',me:true});S.sel.seat=null;go('ride')}
+function reached(id){const b=B.find(x=>x.id===id);if(b&&b.status==='booked'){b.status='reached';R()}}
+function leave(k){departPool(k);R()}
+function land(id){const f=fl(id);f.landed=true;R()}
+function delay(id){fl(id).delay+=120;R()}
+function ff(id){const f=fl(id);if(f.landed&&f.left>0){f.left=Math.max(f.left-300,0);if(f.left<=0)endTimer(f)}R()}
+function reset(){location.reload()}
+
+function header(){return `<h1 style="display:flex;align-items:center;gap:10px"><img src="icon-192.png" alt="" width="38" height="38" style="border-radius:10px">FlyPool</h1><p class="sub">Book your airport cab before you fly. Share it with people going your way.</p>
+<div class="tabs"><button class="${S.role==='p'?'on':''}" onclick="setRole('p')">Passenger</button><button class="${S.role==='d'?'on':''}" onclick="setRole('d')">Driver</button><button class="${S.role==='a'?'on':''}" onclick="setRole('a')">Admin</button></div>`}
+
+function pLogin(){return `<div class="card"><h2>Sign in</h2><label for="n">Name</label><input id="n" autocomplete="name"><label for="ph">Phone number</label><input id="ph" inputmode="numeric" maxlength="10" placeholder="10 digits">
+<label for="g">Gender</label><select id="g"><option value="M">Male</option><option value="F">Female</option><option value="O">Other</option></select>
+<button class="btn" onclick="login()">Continue</button><p class="note">Demo sign-in. A real build would verify your phone with an OTP.</p></div>`}
+
+function pBook(){const s=S.sel,f=fl(s.flight),p=poolOf(s.flight,s.zone,s.ladies),taken=p.map(b=>b.seat),isF=S.user.gender==='F';
+ const seats=[1,2,3,4].map(n=>{const t=p.find(b=>b.seat===n);return t?`<button class="seat taken" disabled>${esc(t.name)}</button>`:`<button class="seat ${s.seat===n?'sel':''}" onclick="seat(${n})">Seat ${n}</button>`}).join('');
+ return `<div class="card"><div class="row"><h2 style="margin:0">Hi, ${esc(S.user.name)}</h2><button class="btn sm alt" onclick="S.user=null;go('login')">Sign out</button></div>
+<label for="f">Your flight to Bhubaneswar (BBI)</label><select id="f" onchange="setSel('flight',this.value)">${F.map(x=>`<option ${x.id===s.flight?'selected':''} value="${x.id}">${x.id} from ${x.from} - lands ${clock(x)}</option>`).join('')}</select>
+<label for="z">Drop zone</label><select id="z" onchange="setSel('zone',this.value)">${ZONES.map(z=>`<option ${z===s.zone?'selected':''}>${z}</option>`).join('')}</select>
+${isF?`<label><input type="checkbox" style="width:auto" ${s.ladies?'checked':''} onchange="setSel('ladies',this.checked)"> Ladies-only cab (+₹${S.extra})</label>`:''}
+</div><div class="card"><div class="row"><h2 style="margin:0">Pick a seat</h2><span class="chip">${taken.length}/4 booked</span></div>
+<div class="car"><div class="drv">Driver</div>${seats}</div>
+<div class="p"><span>Fare per seat</span><b>₹${price(s.ladies)}</b></div><div class="p"><span>Advance to pay now</span><b>₹${S.adv}</b></div><div class="p"><span>Pay the rest at drop-off</span><b>₹${price(s.ladies)-S.adv}</b></div>
+<p class="note">After landing you get 20 minutes to reach the cab. If you miss it, the cab leaves and your advance is not refunded.</p>
+<button class="btn" ${s.seat?'':'disabled'} onclick="go('pay')">${s.seat?'Continue to pay':'Select a seat to continue'}</button>
+<button class="btn alt" onclick="go('ride')">My bookings</button></div>`}
+
+function pPay(){const s=S.sel;return `<div class="card"><h2>Pay advance</h2><div class="p"><span>${s.flight} to ${s.zone}${s.ladies?' (ladies-only)':''}</span><b>Seat ${s.seat}</b></div>
+<label for="m">Pay with</label><select id="m" onchange="S.pay=this.value"><option>UPI</option><option>Debit / credit card</option><option>Net banking</option></select>
+<button class="btn" onclick="pay()">Pay ₹${S.adv} (test mode)</button><button class="btn alt" onclick="go('book')">Back</button><p class="note">No real money moves in this demo.</p></div>`}
+
+function pRide(){const mine=B.filter(b=>b.me);
+ if(!mine.length)return `<div class="card"><h2>No bookings yet</h2><p class="note">Book a seat to see your cab here.</p><button class="btn" onclick="go('book')">Book a cab</button></div>`;
+ return mine.map(b=>{const f=fl(b.flight),k=key(b),dep=D.has(k),pp=poolOf(b.flight,b.zone,b.ladies);
+ let st=!f.landed?`<p class="note">Waiting for ${b.flight} to land (${f.delay?'delayed, now ':''}${clock(f)}). Your 20-minute timer starts at landing.</p>`:
+  dep?'':`<div class="big">${mmss(f.left)}</div><p class="note">Reach the cab at Arrivals Bay 3 before the timer ends.</p>`;
+ if(f.delay&&!f.landed)st=`<p class="chip warn">Flight delayed. New pickup time ${clock(f)}</p>`+st;
+ let msg=b.status==='riding'?'<p><b>Cab has left with you on board. Enjoy the ride.</b></p>':b.status==='noshow'?'<p style="color:var(--bad)"><b>You missed the cab. ₹'+S.adv+' advance forfeited.</b></p>':'';
+ return `<div class="card"><div class="row"><b>${b.flight} to ${b.zone}</b>${chip(b.status)}</div><p class="note">Seat ${b.seat}${b.ladies?' - ladies-only':''} - ₹${price(b.ladies)} (₹${S.adv} paid)</p>${st}${msg}
+ <button class="btn" ${f.landed&&!dep&&b.status==='booked'?'':'disabled'} onclick="reached(${b.id})">${b.status==='reached'?'You are at the cab':'I have reached the cab'}</button>
+ <h2>Cab pool</h2>${pp.map(x=>`<div class="p"><span>Seat ${x.seat}: ${esc(x.name)}</span>${chip(x.status)}</div>`).join('')}</div>`}).join('')+`<button class="btn alt" onclick="go('book')">Book another cab</button>`}
+
+function dView(){const ks=[...new Set(B.filter(live).map(key))];
+ return ks.map(k=>{const[fid,z,l]=k.split('|'),f=fl(fid),p=poolOf(fid,z,l==='1'),dep=D.has(k),all=p.every(b=>b.status==='reached');
+ const can=f.landed&&!dep&&all;
+ return `<div class="card"><div class="row"><b>${fid} to ${z}</b><span>${l==='1'?'<span class="chip">Ladies</span> ':''}<span class="chip">${p.length}/4</span></span></div>
+ <p class="note">${dep?'Departed':!f.landed?'Pickup at '+clock(f)+(f.delay?' (delayed)':''):'Timer '+mmss(f.left)}</p>
+ ${p.map(x=>`<div class="p"><span>Seat ${x.seat}: ${esc(x.name)}</span>${chip(x.status)}</div>`).join('')}
+ <button class="btn" ${can?'':'disabled'} onclick="leave('${k}')">${dep?'Cab departed':can?'Everyone is here. Start trip':'Waiting for passengers'}</button>
+ ${!dep&&f.landed?'<p class="note">The cab leaves automatically when the timer ends. Anyone missing is marked as a no-show.</p>':''}</div>`}).join('')}
+
+function aView(){const live_=B.filter(live),adv=live_.length*S.adv,lost=live_.filter(b=>b.status==='noshow').length*S.adv;
+ return `<div class="card"><h2>Overview</h2><div class="p"><span>Bookings</span><b>${live_.length}</b></div><div class="p"><span>Advance collected</span><b>₹${adv}</b></div><div class="p"><span>Forfeited by no-shows</span><b>₹${lost}</b></div>
+ <div class="p"><span>Base fare per seat</span><span><button class="btn sm alt" onclick="S.base=Math.max(S.base-50,100);R()">-50</button> <b>₹${S.base}</b> <button class="btn sm alt" onclick="S.base+=50;R()">+50</button></span></div>
+ <p class="note">Ladies-only adds ₹${S.extra}. A solo cab would cost about ₹1,200.</p></div>
+ <div class="card wrap"><h2>All bookings</h2><table><tr><th>Name</th><th>Flight</th><th>Zone</th><th>Seat</th><th>Status</th></tr>${live_.map(b=>`<tr><td>${esc(b.name)}</td><td>${b.flight}</td><td>${b.zone}${b.ladies?' (L)':''}</td><td>${b.seat}</td><td>${LBL[b.status][0]}</td></tr>`).join('')}</table></div>`}
+
+function demo(){return `<div class="demo"><b>Demo controls (for the examiner)</b><p class="note">Simulates what live flight data would do.</p>${F.map(f=>`<div class="row"><span>${f.id} ${f.landed?'(landed)':clock(f)}</span><span><button class="btn sm alt" onclick="delay('${f.id}')">Delay +2h</button> <button class="btn sm" ${f.landed?'disabled':''} onclick="land('${f.id}')">Landed</button> <button class="btn sm alt" ${f.landed?'':'disabled'} onclick="ff('${f.id}')">+5 min</button></span></div>`).join('')}<button class="btn alt" onclick="reset()">Reset demo</button></div>`}
+
+function R(){let h=header();
+ if(S.role==='p'){h+=!S.user?pLogin():S.screen==='book'?pBook():S.screen==='pay'?pPay():S.screen==='ride'?pRide():pBook()}
+ else if(S.role==='d')h+=!S.auth.d?staffLoginView('d'):outBar('d')+'<h2>Driver: today\'s pools</h2>'+dView();
+ else h+=!S.auth.a?staffLoginView('a'):outBar('a')+aView();
+ $('app').innerHTML=h+demo()}
+R();
+</script></body></html>
