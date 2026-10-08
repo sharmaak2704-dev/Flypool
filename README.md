@@ -5,7 +5,7 @@
 
 > A college project prototype for Bhubaneswar Airport (BBI). It runs fully in the browser with mock data. No real payments, flights or cabs are involved.
 
-**Live demo:** `https://<your-username>.github.io/flypool/` (replace with your own GitHub Pages link)
+**Live demo:** `https://sharmaak2704-dev.github.io/flypool/` (replace with your own GitHub Pages link)
 
 ## The problem
 
@@ -75,7 +75,7 @@ flypool/
 ## Run locally
 
 ```bash
-git clone https://github.com/<your-username>/flypool.git
+git clone https://github.com/sharmaak2704-dev/flypool.git
 cd flypool
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
